@@ -32,9 +32,11 @@ def convert(csvpath, dbpath=None, table=None):
 		if has_header:
 			r.next()
 
+		# guess the fieldtypes (though, without a `max` parameter, everything will be `TEXT`)
 		fieldtypes = guess_datatypes(r)
-
 		f.seek(0)
+
+		# skip the header row
 		if has_header:
 			r.next()
 
