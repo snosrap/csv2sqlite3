@@ -25,6 +25,7 @@ def convert(csvpath, dbpath=None, table=None):
 
 		# column names are either in the first (header) row or c0, c1, c2 if there is not header row
 		fieldnames = [x if has_header else 'c%s'%i for i,x in enumerate(csv.reader(f, dialect=dialect).next())]
+		f.seek(0)
 
 		# prepare the reader and skip the header row
 		r = csv.reader(f, dialect=dialect)
@@ -45,7 +46,7 @@ def convert(csvpath, dbpath=None, table=None):
 				c.execute(sql_insert, row)
 
 if __name__ == '__main__':
-    if len(sys.argv) <= 1:
-        print('''csv2sqlite3.py CSV_FILE [ DB_FILE [ TABLE_NAME ] ]''')
-    else:
-	    convert(*sys.argv[1:])
+	if len(sys.argv) <= 1:
+		print('''csv2sqlite3.py CSV_FILE [ DB_FILE [ TABLE_NAME ] ]''')
+	else:
+		convert(*sys.argv[1:])
