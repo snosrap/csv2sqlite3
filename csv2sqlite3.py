@@ -44,7 +44,7 @@ def convert(csvpath, dbpath=None, table=None):
 			c = conn.cursor()
 
 			# conditional create
-			sql_create = 'CREATE TABLE IF NOT EXISTS `%s` (%s);' % (table, ','.join(['`%s` %s' % (n, t) for (n, t) in zip(fieldnames, fieldtypes)]))
+			sql_create = 'CREATE TABLE IF NOT EXISTS `%s` (%s);' % (table, ','.join(['\n\t`%s`\t%s' % (n, t) for (n, t) in zip(fieldnames, fieldtypes)]) + '\n')
 			c.execute(sql_create)
 
 			# insert csv values
@@ -52,7 +52,7 @@ def convert(csvpath, dbpath=None, table=None):
 			for row in r:
 				c.execute(sql_insert, row)
 
-def guess_datatypes(csvreader, max=100):
+def guess_datatypes(csvreader, max=0):
 	types = []
 	for i, row in enumerate(csvreader):
 		if len(types) == 0:
