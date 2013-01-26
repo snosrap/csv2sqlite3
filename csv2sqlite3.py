@@ -34,6 +34,7 @@ def convert(csvpath, dbpath=None, table=None):
 
 		# connect to database
 		with sqlite3.connect(dbpath) as conn:
+			conn.text_factory = str
 			c = conn.cursor()
 
 			# conditional create
