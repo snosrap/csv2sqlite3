@@ -5,11 +5,11 @@ import csv, sqlite3
 
 def convert(csvpath, dbpath=None, table=None):
 
-    # file.csv -> file.db
+	# file.csv -> file.db
 	if not dbpath:
 		dbpath = '%s.db' % os.path.splitext(csvpath)[0]
 
-    # /path/file.csv -> file
+	# /path/file.csv -> file
 	if not table:
 		table = os.path.basename(os.path.splitext(csvpath)[0])
 
