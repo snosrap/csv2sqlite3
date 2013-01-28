@@ -33,7 +33,7 @@ def convert(csvpath, dbpath=None, table=None):
 			r.next()
 
 		# guess the fieldtypes (though, without a `max` parameter, everything will be `TEXT`)
-		fieldtypes = guess_datatypes(r)
+		fieldtypes = guess_datatypes(r, 0)
 		f.seek(0)
 
 		# skip the header row
@@ -54,7 +54,7 @@ def convert(csvpath, dbpath=None, table=None):
 			for row in r:
 				c.execute(sql_insert, row)
 
-def guess_datatypes(csvreader, max=0):
+def guess_datatypes(csvreader, max=100):
 	types = []
 	for i, row in enumerate(csvreader):
 		if len(types) == 0:
