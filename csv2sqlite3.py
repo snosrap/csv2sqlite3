@@ -4,7 +4,7 @@ import os, sys
 import csv, sqlite3, argparse
 
 def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, guessdatatypes=True):
-	print guessdatatypes
+
 	# /path/file.csv -> /path/file.db
 	if not dbpath:
 		dbpath = '%s.db' % os.path.splitext(csvpath)[0]
