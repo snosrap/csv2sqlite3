@@ -3,8 +3,8 @@
 import os, sys
 import csv, sqlite3, argparse
 
-def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, samplesize=100):
-
+def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, guessdatatypes=True):
+	print guessdatatypes
 	# /path/file.csv -> /path/file.db
 	if not dbpath:
 		dbpath = '%s.db' % os.path.splitext(csvpath)[0]
@@ -37,17 +37,17 @@ def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, samplesize=100):
 			r.next()
 
 		# guess the fieldtypes (though, without a `max` parameter, everything will be `TEXT`)
-		fieldtypes = guess_datatypes(r, samplesize)
+		fieldtypes = guess_datatypes(r, 100) if guessdatatypes else ["TEXT"] * len(fieldnames)
 		f.seek(0)
+
+		# skip the header row
+		if has_header:
+			r.next()
 		
 		# write the SQL file if it doesn't exist
 		if not os.path.exists(sqlpath):
 			with open(sqlpath, 'wb') as w:
 				w.write('CREATE TABLE IF NOT EXISTS `%s` (%s);' % (tablename, ','.join(['\n\t`%s`\t%s' % (n, t) for (n, t) in zip(fieldnames, fieldtypes)]) + '\n'))
-
-		# skip the header row
-		if has_header:
-			r.next()
 
 		# connect to database
 		with sqlite3.connect(dbpath) as conn:
@@ -61,7 +61,7 @@ def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, samplesize=100):
 			# insert csv values
 			sql_insert = 'INSERT INTO `%s` VALUES (%s);' % (tablename, ','.join(['?']*len(fieldnames)))
 			for row in r:
-				c.execute(sql_insert, row)
+				c.execute(sql_insert, [x if len(x)>0 else None for x in row] if guessdatatypes else row)
 
 def guess_datatypes(csvreader, max=100):
 	types = []
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 	parser.add_argument('-d', '--db_file', help='path to SQLite3 database file')
 	parser.add_argument('-t', '--table_name', help='name of the table')
 	parser.add_argument('-s', '--sql_create', help='path to CREATE TABLE .sql file')
-	parser.add_argument('-z', '--sample_size', type=int, default=100, help='how many rows to search to guess datatypes')
+	parser.add_argument('-n', '--naive_datatypes', action="store_true", default=False, help='don''t guess datatypes (everything is TEXT, no NULLs)')
 	args = parser.parse_args()
 
-	convert(args.csv_file, args.db_file, args.table_name, args.sql_create, args.sample_size)
+	convert(args.csv_file, args.db_file, args.table_name, args.sql_create, not args.naive_datatypes)
