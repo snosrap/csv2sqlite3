@@ -13,7 +13,7 @@ def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, samplesize=100):
 	if not tablename:
 		tablename = os.path.basename(os.path.splitext(csvpath)[0])
 
-	# /path/file.csv -> /path/file.sql
+	# /path/file.csv -> /path/tablename.sql
 	if not sqlpath:
 		sqlpath = os.path.join(os.path.dirname(csvpath), '%s.sql' % tablename)
 
