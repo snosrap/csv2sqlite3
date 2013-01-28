@@ -37,7 +37,7 @@ def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, guessdatatypes=T
 			r.next()
 
 		# guess the fieldtypes (though, without a `max` parameter, everything will be `TEXT`)
-		fieldtypes = guess_datatypes(r, 100) if guessdatatypes else ["TEXT"] * len(fieldnames)
+		fieldtypes = guess_datatypes(r, 1000) if guessdatatypes else ["TEXT"] * len(fieldnames)
 		f.seek(0)
 
 		# skip the header row
@@ -65,30 +65,26 @@ def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, guessdatatypes=T
 
 def guess_datatypes(csvreader, max=100):
 	types = []
-	for i, row in enumerate(csvreader):
+	for r, row in enumerate(csvreader):
 		if len(types) == 0:
-			types.extend([None] * len(row))
-		if i >= max:
+			types.extend([[int, long, float, str]] * len(row))
+		if r >= max:
 			break
-		for j, cell in enumerate(row):
-			if types[j] == None:
-				for type_try in [int, long, float]:
-					try:
-						type_try(cell)
-						types[j] = type_try
-						break
-					except:
-						pass
-			elif types[j] in [int, long, float]:
-				try:
-					types[j](cell)
-				except:
-					types[j] = str
+		for c, cell in enumerate(row):
+			types[c] = [x for x in types[c] if try_parse(cell, x)]
 
-	conversion = {int:"INTEGER",long:"INTEGER",float:"REAL",str:"TEXT",None:"TEXT"}
-	
-	return [conversion[x] for x in types]
+	conversion = {int:"INTEGER",long:"INTEGER",float:"REAL",str:"TEXT"}
 
+	return [conversion[x[0]] for x in types]
+
+def try_parse(str, typ):
+	if len(str) == 0:
+		return True
+	try:
+		typ(str)
+		return True
+	except:
+		return False
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Converts a CSV file to a SQLite3 database')
