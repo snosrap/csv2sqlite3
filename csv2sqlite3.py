@@ -1,22 +1,26 @@
 #!/usr/bin/python
 
 import os, sys
-import csv, sqlite3
+import csv, sqlite3, argparse
 
-def convert(csvpath, dbpath=None, table=None):
+def convert(csvpath, dbpath=None, tablename=None, sqlpath=None, samplesize=100):
 
-	# file.csv -> file.db
+	# /path/file.csv -> /path/file.db
 	if not dbpath:
 		dbpath = '%s.db' % os.path.splitext(csvpath)[0]
 
 	# /path/file.csv -> file
-	if not table:
-		table = os.path.basename(os.path.splitext(csvpath)[0])
+	if not tablename:
+		tablename = os.path.basename(os.path.splitext(csvpath)[0])
+
+	# /path/file.csv -> /path/file.sql
+	if not sqlpath:
+		sqlpath = os.path.join(os.path.dirname(csvpath), '%s.sql' % tablename)
 
 	with open(csvpath, 'rb') as f:
 		
 		# sample the data, then rewind
-		sample = f.read(1024)
+		sample = f.read(4096)
 		f.seek(0)
 
 		# sniff the sample data to guess the delimeters, etc
@@ -33,8 +37,13 @@ def convert(csvpath, dbpath=None, table=None):
 			r.next()
 
 		# guess the fieldtypes (though, without a `max` parameter, everything will be `TEXT`)
-		fieldtypes = guess_datatypes(r, 0)
+		fieldtypes = guess_datatypes(r, samplesize)
 		f.seek(0)
+		
+		# write the SQL file if it doesn't exist
+		if not os.path.exists(sqlpath):
+			with open(sqlpath, 'wb') as w:
+				w.write('CREATE TABLE IF NOT EXISTS `%s` (%s);' % (tablename, ','.join(['\n\t`%s`\t%s' % (n, t) for (n, t) in zip(fieldnames, fieldtypes)]) + '\n'))
 
 		# skip the header row
 		if has_header:
@@ -46,11 +55,11 @@ def convert(csvpath, dbpath=None, table=None):
 			c = conn.cursor()
 
 			# conditional create
-			sql_create = 'CREATE TABLE IF NOT EXISTS `%s` (%s);' % (table, ','.join(['\n\t`%s`\t%s' % (n, t) for (n, t) in zip(fieldnames, fieldtypes)]) + '\n')
+			sql_create = open(sqlpath, 'r').read()
 			c.execute(sql_create)
 
 			# insert csv values
-			sql_insert = 'INSERT INTO `%s` VALUES (%s);' % (table, ','.join(['?']*len(fieldnames)))
+			sql_insert = 'INSERT INTO `%s` VALUES (%s);' % (tablename, ','.join(['?']*len(fieldnames)))
 			for row in r:
 				c.execute(sql_insert, row)
 
@@ -63,26 +72,31 @@ def guess_datatypes(csvreader, max=100):
 			break
 		for j, cell in enumerate(row):
 			if types[j] == None:
-				for type_try in [long, float]:
+				for type_try in [int, long, float]:
 					try:
 						type_try(cell)
 						types[j] = type_try
 						break
 					except:
 						pass
-			elif types[j] in [long, float]:
+			elif types[j] in [int, long, float]:
 				try:
 					types[j](cell)
 				except:
 					types[j] = str
 
-	conversion = {long:"INTEGER",float:"REAL",str:"TEXT",None:"TEXT"}
+	conversion = {int:"INTEGER",long:"INTEGER",float:"REAL",str:"TEXT",None:"TEXT"}
 	
 	return [conversion[x] for x in types]
 
 
 if __name__ == '__main__':
-	if len(sys.argv) <= 1:
-		print('''csv2sqlite3.py CSV_FILE [ DB_FILE [ TABLE_NAME ] ]''')
-	else:
-		convert(*sys.argv[1:])
+	parser = argparse.ArgumentParser(description='Converts a CSV file to a SQLite3 database')
+	parser.add_argument("csv_file", help="path to CSV file")
+	parser.add_argument('-d', '--db_file', help='path to SQLite3 database file')
+	parser.add_argument('-t', '--table_name', help='name of the table')
+	parser.add_argument('-s', '--sql_create', help='path to CREATE TABLE .sql file')
+	parser.add_argument('-z', '--sample_size', type=int, default=100, help='how many rows to search to guess datatypes')
+	args = parser.parse_args()
+
+	convert(args.csv_file, args.db_file, args.table_name, args.sql_create, args.sample_size)
